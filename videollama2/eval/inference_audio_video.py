@@ -68,7 +68,7 @@ def run_inference(args):
 
     assert args.batch_size == 1, "Batch size must be 1 for inference"
     if args.dataset == "MESC":
-        dataset = MESCDataset(gt_questions, processor)
+        dataset = MESCDataset(gt_questions, processor['video'])
     else:
         raise NotImplementedError
     dataloader = DataLoader(dataset, shuffle=False, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=collate_fn)
