@@ -245,6 +245,7 @@ class Videollama2MetaForCausalLM(ABC):
                     else:
                         raise NotImplementedError
 
+            # NOTE(ngan): VIDEO AND AUDIO FEATURES HERE
             if len(X_audio) > 0:
                 Xa_features = torch.cat(X_audio, dim=0)
                 audio_padding_mask = torch.zeros(Xa_features.shape, device=self.device).bool()
@@ -372,3 +373,30 @@ class Videollama2MetaForCausalLM(ABC):
                 assert attention_mask.shape == new_input_embeds.shape[:2]
 
         return None, attention_mask, past_key_values, new_input_embeds, new_labels
+
+    def get_video_audio_embeddings(self, video_tensor, audio_tensor):
+        """Get video and audio embeddings directly.
+        
+        Args:
+            video_tensor (torch.Tensor): Video tensor
+            audio_tensor (torch.Tensor): Audio tensor
+            
+        Returns:
+            dict: Dictionary containing video and audio embeddings
+        """
+        # Get video embeddings
+        video_features = self.encode_images_or_videos([(video_tensor, 'video')])
+        
+        # Get audio embeddings
+        audio_padding_mask = torch.zeros(audio_tensor.shape, device=self.device).bool()
+        audio_embedding, _, _ = self.get_model().get_audio_tower().extract_features(
+            audio_tensor, 
+            padding_mask=audio_padding_mask,
+            feature_only=True
+        )
+        audio_features = self.get_model().mm_projector_a(audio_embedding)
+        
+        return {
+            'video': video_features,
+            'audio': audio_features
+        }

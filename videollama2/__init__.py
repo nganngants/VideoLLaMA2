@@ -29,6 +29,25 @@ def model_init(model_path=None, **kwargs):
     return model, processor, tokenizer
 
 
+def get_video_audio_embeddings(image_or_video, model, tokenizer, modal='video', **kwargs):
+    """inference api of VideoLLaMA2 for video and audio embeddings.
+    Args:
+        model: VideoLLaMA2 model
+        image_or_video (dict): Dictionary containing video and audio tensors
+        tokenizer: tokenizer
+        modal (str): inference modality ('video' or 'audio')
+    Returns:
+        dict: Dictionary containing video and audio embeddings
+    """
+    if not isinstance(image_or_video, dict):
+        raise ValueError("image_or_video must be a dictionary containing 'video' and 'audio' tensors")
+
+    video_tensor = image_or_video['video'].half().cuda()
+    audio_tensor = image_or_video['audio'].half().cuda()
+
+    return model.get_video_audio_embeddings(video_tensor, audio_tensor)
+
+
 def mm_infer(image_or_video, instruct, model, tokenizer, modal='video', **kwargs):
     """inference api of VideoLLaMA2 for video understanding.
 
