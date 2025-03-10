@@ -7,7 +7,7 @@ import traceback
 from tqdm import tqdm
 import torch
 from torch.utils.data import Dataset, DataLoader
-
+import gc
 import sys
 sys.path.append('./')
 from videollama2 import model_init, mm_infer, get_video_audio_embeddings
@@ -91,6 +91,13 @@ def run_inference(args):
             # Save embeddings
             output_path = os.path.join(args.output_dir, f"{video_name}.pt")
             torch.save(embeddings, output_path)
+
+            # clean up
+            del audio_video_tensor
+            del embeddings
+
+            torch.cuda.empty_cache()
+            gc.collect()
             
         except:
             traceback.print_exc()
