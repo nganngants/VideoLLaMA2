@@ -83,12 +83,10 @@ def run_inference(args):
 
         try:
             # Get embeddings
-            embeddings = get_video_audio_embeddings(
-                audio_video_tensor,
-                model=model,
-                tokenizer=tokenizer,
-                modal='video'
-            )
+            embeddings = {
+                "audio": audio_video_tensor['audio'].detach().clone().cpu().numpy(),
+                "video": audio_video_tensor['video'].detach().clone().cpu().numpy(),
+            }
             
             # Save embeddings
             output_path = os.path.join(args.output_dir, f"{video_name}.pt")
