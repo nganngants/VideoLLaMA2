@@ -82,10 +82,10 @@ def run_inference(args):
         video_name = video_names[0]
 
         try:
-            # Get embeddings
+            # Get embeddings - store as tensor instead of numpy to avoid BFloat16 error
             embeddings = {
-                "audio": audio_video_tensor['audio'].detach().clone().cpu().numpy(),
-                "video": audio_video_tensor['video'].detach().clone().cpu().numpy(),
+                "audio": audio_video_tensor['audio'].detach().clone().cpu(),
+                "video": audio_video_tensor['video'].detach().clone().cpu(),
             }
             
             # Save embeddings
@@ -99,9 +99,9 @@ def run_inference(args):
             torch.cuda.empty_cache()
             gc.collect()
             
-        except:
+        except Exception as e:
             traceback.print_exc()
-            print(f"Error processing video: {video_name}")
+            print(f"Error processing video: {video_name}, Error: {str(e)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
