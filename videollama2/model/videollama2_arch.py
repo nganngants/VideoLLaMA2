@@ -156,7 +156,7 @@ class Videollama2MetaForCausalLM(ABC):
     def get_audio_tower(self):
         return self.get_model().get_audio_tower()
 
-    def encode_images_or_videos(self, images):
+    def encode_images_or_videos(self, images, return_features=False):
         num_frames = self.config.num_frames if hasattr(self.config, 'num_frames') else NUM_FRAMES
 
         data_batch = []
@@ -176,6 +176,8 @@ class Videollama2MetaForCausalLM(ABC):
         frames_features = self.get_model().get_vision_tower()(frames)
         frames_features = einops.rearrange(frames_features, '(b t) n h -> b t n h', b = batch_size)
 
+        if return_features:
+            return frames_features
         return self.temporal_aggregator(frames_features)
 
     def temporal_aggregator(self, frames_features):
@@ -385,7 +387,7 @@ class Videollama2MetaForCausalLM(ABC):
             dict: Dictionary containing video and audio embeddings
         """
         # Get video embeddings
-        video_features = self.encode_images_or_videos([(video_tensor, 'video')])
+        video_embedding = self.encode_images_or_videos([(video_tensor, 'video')], return_features=True)
         
         # Get audio embeddings
         audio_padding_mask = torch.zeros(audio_tensor.shape, device=self.device).bool()
@@ -394,9 +396,8 @@ class Videollama2MetaForCausalLM(ABC):
             padding_mask=audio_padding_mask,
             feature_only=True
         )
-        audio_features = self.get_model().mm_projector_a(audio_embedding)
         
         return {
-            'video': video_features,
-            'audio': audio_features
+            'video': video_embedding,
+            'audio': audio_embedding
         }

@@ -15,4 +15,5 @@ unzip mesc_test.zip
 
 cd ..
 
-python3 create_mesc_json.py --video-folder MESC/MESC_Video --output-path MESC/mesc.json
+gdown 1-KEORLVCufXOSn-JKEIAVRtBibjQj-k3
+python3 prepare_json_train.py

@@ -2,7 +2,7 @@
 
 python3 videollama2/eval/inference_audio_video.py \
             --model-path DAMO-NLP-SG/VideoLLaMA2.1-7B-AV \
-            --video-folder MESC/mesc_test \
-            --question-file MESC/mesc_test.json \
-            --output-dir embeddings/ \
+            --video-folder MESC/video_data \
+            --question-file mesc_train.json \
+            --output-dir embeddings_train/ \
             --dataset MESC

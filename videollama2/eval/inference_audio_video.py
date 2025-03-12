@@ -12,6 +12,7 @@ import sys
 sys.path.append('./')
 from videollama2 import model_init, mm_infer, get_video_audio_embeddings
 from videollama2.utils import disable_torch_init
+import h5py
 
 # NOTE: Ignore TypedStorage warning, which refers to this link~(https://github.com/pytorch/pytorch/issues/97207#issuecomment-1494781560)
 warnings.filterwarnings('ignore', category=UserWarning, message='TypedStorage is deprecated')
@@ -28,9 +29,10 @@ def get_chunk(lst, n, k):
     return chunks[k]
 
 class MESCDataset(Dataset):
-    def __init__(self, questions, processor):
+    def __init__(self, questions, processor, folder_path):
         self.questions = questions
         self.processor = processor
+        self.folder_path = folder_path
     
     def __len__(self):
         return len(self.questions)
@@ -39,6 +41,9 @@ class MESCDataset(Dataset):
         sample = self.questions[idx]
         
         video_path = sample['video']
+
+        if not video_path.startswith(self.folder_path):
+            video_path = os.path.join(self.folder_path, video_path)
         
         try:
             audio_video_dict = self.processor(video_path, va=True)
@@ -68,7 +73,7 @@ def run_inference(args):
 
     assert args.batch_size == 1, "Batch size must be 1 for inference"
     if args.dataset == "MESC":
-        dataset = MESCDataset(gt_questions, processor['video'])
+        dataset = MESCDataset(gt_questions, processor['video'], args.video_folder)
     else:
         raise NotImplementedError
     dataloader = DataLoader(dataset, shuffle=False, batch_size=args.batch_size, num_workers=args.num_workers, collate_fn=collate_fn)
@@ -82,19 +87,27 @@ def run_inference(args):
         video_name = video_names[0]
 
         try:
-            # Get embeddings - store as tensor instead of numpy to avoid BFloat16 error
-            embeddings = {
-                "audio": audio_video_tensor['audio'].detach().clone().cpu(),
-                "video": audio_video_tensor['video'].detach().clone().cpu(),
-            }
+            embeddings = get_video_audio_embeddings(audio_video_tensor, model, tokenizer)
+
+            audio_np = embeddings["audio"].detach().cpu().numpy().astype("float16")
+            video_np = embeddings["video"].detach().cpu().numpy().astype("float16")
+
+            output_path = os.path.join(args.output_dir, f"{video_name}.h5")
+        
+            with h5py.File(output_path, 'w') as f:
+                # Use gzip compression with maximum compression level (9)
+                f.create_dataset('audio', data=audio_np, compression='gzip', compression_opts=1)
+                f.create_dataset('video', data=video_np, compression='gzip', compression_opts=1)
             
             # Save embeddings
-            output_path = os.path.join(args.output_dir, f"{video_name}.pt")
-            torch.save(embeddings, output_path)
+            # output_path = os.path.join(args.output_dir, f"{video_name}.pt")
+            # torch.save(embeddings, output_path)
 
             # clean up
             del audio_video_tensor
             del embeddings
+            del audio_np
+            del video_np
 
             torch.cuda.empty_cache()
             gc.collect()
@@ -121,3 +134,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     run_inference(args)
+
+zip -r -v - embeddings_train | split -b 4G - embeddings/embeddings_train.zip.
